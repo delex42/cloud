@@ -9,6 +9,8 @@ RUN	apt-get -y update && \
 
 # AWS
 RUN	pip3 install awscli boto3
+RUN	mkdir /root/AWS
+ADD	AWS /root/AWS
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
