@@ -1,33 +1,34 @@
 #! /usr/bin/python3
 
-import boto3
+import boto3, aws_utils
+from aws_utils import *
 
-while True:
-    profile = input("Profile: ")
-    subnet = input("Subnet: ")
-    sg = input("Security group: ")
+def main():
+    total = input("How many instances to create: ")
+    aws_list = []
 
-    session = boto3.Session(profile_name=profile)
+    for i in range(int(total)):
+        profile = input("Profile: ")
+        aws = AwsUtils(profile)
 
-    ec2 = session.resource('ec2')
+        # List subnets and ask user to choose one
+        aws.subnet_get_all(True)
+        subnet = input("Subnet: ")
 
-    # create a new EC2 instance
-    instance = ec2.create_instances(
-        ImageId='ami-00eb20669e0990cb4',
-        MinCount=1,
-        MaxCount=1,
-        InstanceType='t2.micro',
-        KeyName=profile,  # my key pairs always have the same name as profile
-        NetworkInterfaces=[
-            {
-                'DeviceIndex': 0,
-                'SubnetId': subnet,
-                'AssociatePublicIpAddress': True,
-                'Groups': [ sg ]
-            }
-        ]
-        # SubnetId=subnet
-    )
+        # List security groups and ask user to choose one
+        aws.sg_get_all(True)
+        sg = input("Security group: ")
 
-    print(instance)
+        aws.instance_create(subnet=subnet, sg=sg)
+        aws_list.append(aws)
+
+        # aws.instance_display_all()
+
+    for aws in aws_list:
+        aws.print_profile()
+        aws.instance_wait_until_running_all(display_type='Network')
+        print()
+
+if __name__ == "__main__":
+    main()
 
