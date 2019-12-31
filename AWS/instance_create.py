@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 
-import boto3, aws_utils
 from aws_utils import *
 
 def main():
