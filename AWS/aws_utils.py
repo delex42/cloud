@@ -17,22 +17,50 @@ class AwsUtils:
             print("obj.%s = %r" % (attr, getattr(obj, attr)))
 
     def print_json(self, json_object):
-        print(json.dumps(json_object, indent=4))
+        print(json.dumps(json_object, indent=4, sort_keys=True, default=str))
 
-    def print_profile(self):
+
+    ### Profiles
+    def profile_print(self):
         print(self.profile)
+
+    def profile_list_available(self):
+        self.print_json(self.session.available_profiles)
 
     ### Instances
     def instance_display(self, instance_id, display_type=''):
         i = self.ec2_resource.Instance(instance_id)
         if display_type == 'Full':
             self.dump(i)
+            return
         if display_type == 'Network':
             print(i.network_interfaces_attribute)
+            return
 
     def instance_display_all(self):
         for instance_id in self.instance_id_list:
             self.instance_display(instance_id, display_type='Full')
+
+    # Lists all instances in that account / region
+    def instance_list(self, display_type='Full'):
+        resp = self.ec2_client.describe_instances()
+        if display_type == 'Full':
+            self.print_json(resp)
+            return
+        for r in resp['Reservations']:
+            for i in r['Instances']:
+                print('***** ' + i['InstanceId'])
+                print('State: ' + i['State']['Name'])
+                if display_type == 'Network':
+                    if 'PrivateIpAddress' in i:
+                        print('PrivateIpAddress: ' + i['PrivateIpAddress'])
+                    if 'PublicIpAddress' in i:
+                        print('PublicIpAddress: ' + i['PublicIpAddress'])
+                    print()
+
+    def instance_terminate(self, instance_id):
+        resp = self.ec2_resource.Instance(instance_id).stop()
+        self.print_json(resp)
 
     def instance_wait_until_running(self, instance_id, display_type=''):
         i = self.ec2_resource.Instance(instance_id)

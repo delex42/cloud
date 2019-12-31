@@ -21,8 +21,10 @@ def main():
         aws.instance_create(subnet=subnet, sg=sg)
         aws_list.append(aws)
 
+        # aws.instance_display_all()
+
     for aws in aws_list:
-        aws.print_profile()
+        aws.profile_print()
         aws.instance_wait_until_running_all(display_type='Network')
         print()
 
