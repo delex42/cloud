@@ -19,7 +19,6 @@ class AwsUtils:
     def print_json(self, json_object):
         print(json.dumps(json_object, indent=4, sort_keys=True, default=str))
 
-
     ### Profiles
     def profile_print(self):
         print(self.profile)
