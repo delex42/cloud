@@ -2,7 +2,7 @@
 
 from aws_utils import *
 
-def main():
+def main():    
     while True:
         profile = input("Profile: ")
         aws = AwsUtils(profile)

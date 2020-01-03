@@ -5,9 +5,10 @@ import boto3, json
 class AwsUtils:
     def __init__(self, profile):
         self.profile = profile
-        self.session = boto3.Session(profile_name=profile)
-        self.ec2_resource = self.session.resource('ec2')
-        self.ec2_client = self.session.client('ec2')
+        if profile != "none":
+            self.session = boto3.Session(profile_name=profile)
+            self.ec2_resource = self.session.resource('ec2')
+            self.ec2_client = self.session.client('ec2')
         # List of instance IDs that we know about. No point in keeping the
         # entire instance objects, better to fetch the object every time.
         self.instance_id_list = []
@@ -15,17 +16,18 @@ class AwsUtils:
     def dump(self, obj):
         for attr in dir(obj):
             print("obj.%s = %r" % (attr, getattr(obj, attr)))
-
+        
     def print_json(self, json_object):
         print(json.dumps(json_object, indent=4, sort_keys=True, default=str))
+
 
     ### Profiles
     def profile_print(self):
         print(self.profile)
 
     def profile_list_available(self):
-        self.print_json(self.session.available_profiles)
-
+        self.print_json(boto3.Session().available_profiles)
+        
     ### Instances
     def instance_display(self, instance_id, display_type=''):
         i = self.ec2_resource.Instance(instance_id)
@@ -40,6 +42,15 @@ class AwsUtils:
         for instance_id in self.instance_id_list:
             self.instance_display(instance_id, display_type='Full')
 
+    def instance_get_name(self, instance_id):
+        i = self.ec2_resource.Instance(instance_id)
+        name = ''
+        if i.tags:
+            for tags in i.tags:
+                if tags['Key'] == 'Name':
+                    name = tags['Value']
+        return name
+            
     # Lists all instances in that account / region
     def instance_list(self, display_type='Full'):
         resp = self.ec2_client.describe_instances()
@@ -48,7 +59,9 @@ class AwsUtils:
             return
         for r in resp['Reservations']:
             for i in r['Instances']:
-                print('***** ' + i['InstanceId'])
+                instance_id = i['InstanceId']
+                print('***** ' + instance_id)
+                print('Name: ' + self.instance_get_name(instance_id))
                 print('State: ' + i['State']['Name'])
                 if display_type == 'Network':
                     if 'PrivateIpAddress' in i:
@@ -57,10 +70,15 @@ class AwsUtils:
                         print('PublicIpAddress: ' + i['PublicIpAddress'])
                     print()
 
-    def instance_terminate(self, instance_id):
-        resp = self.ec2_resource.Instance(instance_id).stop()
-        self.print_json(resp)
+    def instance_list_for_all_profiles(self, display_type='Full'):
+        for profile in boto3.Session().available_profiles:
+            print('------------------ ' + profile + ' ------------------')
+            AwsUtils(profile).instance_list(display_type)
 
+    def instance_terminate(self, instance_id):
+        resp = self.ec2_resource.Instance(instance_id).terminate()
+        self.print_json(resp)
+            
     def instance_wait_until_running(self, instance_id, display_type=''):
         i = self.ec2_resource.Instance(instance_id)
         print('Waiting for instance ' + instance_id + '... ')
@@ -72,10 +90,20 @@ class AwsUtils:
         for instance_id in self.instance_id_list:
             self.instance_wait_until_running(instance_id, display_type)
 
+    def instance_tag_add(self, instance_id, tag_key, tag_value):
+        # i = self.ec2_resource.Instance(instance_id)
+        self.ec2_client.create_tags(Resources=[instance_id],
+                                    Tags=[
+                                        {'Key': tag_key,
+                                         'Value': tag_value
+                                        }
+                                    ])
+
     def instance_create(self,
+                        name,
+                        image_id,
                         subnet,
                         sg,
-                        image_id='ami-00eb20669e0990cb4',
                         instance_type='t2.micro',
                         associate_public_ip=True,
                         display=False):
@@ -96,11 +124,12 @@ class AwsUtils:
             # SubnetId=subnet
         )
         for instance in instances:
+            self.instance_tag_add(instance.id, 'Name', name)            
             self.instance_id_list.append(instance.id)
             print('Created instance ' + instance.id)
             if display:
                 self.dump(instance)
-
+        
     ### VPCs
     def vpc_get_all(self, display=False):
         vpcs = self.ec2_client.describe_vpcs()
@@ -124,4 +153,3 @@ class AwsUtils:
             print("***** Security Groups *****")
             self.print_json(sgs['SecurityGroups'])
         return sgs
-
