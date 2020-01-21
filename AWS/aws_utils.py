@@ -1,6 +1,7 @@
 #! /usr/bin/python3
 
 import boto3, json
+from dateutil import parser
 
 class AwsUtils:
     def __init__(self, profile):
@@ -20,6 +21,61 @@ class AwsUtils:
     def print_json(self, json_object):
         print(json.dumps(json_object, indent=4, sort_keys=True, default=str))
 
+    ### Helper functions
+    def _build_vpc_filter(self, vpc):
+        filter = [
+            {
+                'Name': 'vpc-id',
+                'Values': [ vpc ]
+            }
+        ]
+        return filter
+        
+    ### AMIs
+    def ami_get_latest(self):
+        filters = [ {
+            'Name': 'name',
+            'Values': ['amzn-ami-hvm-*']
+        },{
+            'Name': 'description',
+            'Values': ['Amazon Linux AMI*']
+        },{
+            'Name': 'architecture',
+            'Values': ['x86_64']
+        },{
+            'Name': 'owner-alias',
+            'Values': ['amazon']
+        },{
+            'Name': 'owner-id',
+            'Values': ['137112412989']
+        },{
+            'Name': 'state',
+            'Values': ['available']
+        },{
+            'Name': 'root-device-type',
+            'Values': ['ebs']
+        },{
+            'Name': 'virtualization-type',
+            'Values': ['hvm']
+        },{
+            'Name': 'hypervisor',
+            'Values': ['xen']
+        },{
+            'Name': 'image-type',
+            'Values': ['machine']
+        } ]
+
+        resp = self.ec2_client.describe_images(Owners=['amazon'], Filters=filters)
+        latest = None
+        for image in resp['Images']:
+            if not latest:
+                latest = image
+                continue
+            if parser.parse(image['CreationDate']) > parser.parse(latest['CreationDate']):
+                latest = image
+        ami = latest['ImageId']
+        print('Found latest Amazon Linux AMI ' + ami)
+        return ami
 
     ### Profiles
     def profile_print(self):
@@ -64,6 +120,10 @@ class AwsUtils:
                 print('Name: ' + self.instance_get_name(instance_id))
                 print('State: ' + i['State']['Name'])
                 if display_type == 'Network':
+                    if 'VpcId' in i:
+                        vpc_id = i['VpcId']
+                        vpc_name = self.vpc_get_name_from_id(vpc_id)
+                        print('VPC: ' + vpc_name)
                     if 'PrivateIpAddress' in i:
                         print('PrivateIpAddress: ' + i['PrivateIpAddress'])
                     if 'PublicIpAddress' in i:
@@ -101,14 +161,13 @@ class AwsUtils:
 
     def instance_create(self,
                         name,
-                        image_id,
                         subnet,
                         sg,
                         instance_type='t2.micro',
                         associate_public_ip=True,
                         display=False):
         instances = self.ec2_resource.create_instances(
-            ImageId=image_id,
+            ImageId=self.ami_get_latest(),
             MinCount=1,
             MaxCount=1,
             InstanceType=instance_type,
@@ -131,6 +190,16 @@ class AwsUtils:
                 self.dump(instance)
         
     ### VPCs
+    def vpc_get_name_from_id(self, identifier):
+        resp = self.ec2_client.describe_vpcs(
+            VpcIds=[
+                identifier,
+            ]
+        )
+        for tag in resp['Vpcs'][0]['Tags']:
+            if tag['Key'] == 'Name':
+                return(tag['Value'])
+    
     def vpc_get_all(self, display=False):
         vpcs = self.ec2_client.describe_vpcs()
         if display:
@@ -139,16 +208,26 @@ class AwsUtils:
         return vpcs
 
     ### Subnets
-    def subnet_get_all(self, display=False):
-        subnets = self.ec2_client.describe_subnets()
+    def subnet_get_all(self, vpc = '', display=False):
+        if vpc == '':
+            subnets = self.ec2_client.describe_subnets()
+        else:
+            filters = self._build_vpc_filter(vpc)
+            subnets = self.ec2_client.describe_subnets(
+                Filters = filters)
         if display:
             print("***** Subnets *****")
             self.print_json(subnets['Subnets'])
         return subnets
 
     ### Security Groups
-    def sg_get_all(self, display=False):
-        sgs = self.ec2_client.describe_security_groups()
+    def sg_get_all(self, vpc = '', display=False):
+        if vpc == '':
+            sgs = self.ec2_client.describe_security_groups()
+        else:
+            filters = self._build_vpc_filter(vpc)
+            sgs = self.ec2_client.describe_security_groups(
+                Filters = filters)
         if display:
             print("***** Security Groups *****")
             self.print_json(sgs['SecurityGroups'])
