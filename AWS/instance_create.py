@@ -26,7 +26,15 @@ def main():
         aws.sg_get_all(vpc, True)
         sg = input("Security group: ")
 
-        aws.instance_create(name = name, subnet=subnet, sg=sg)
+        # Ask for public IP association
+        public_ip = input("Associate public IP (y/n): ")
+        if public_ip == 'y':
+            associate_public_ip = True
+        else:
+            associate_public_ip = False
+
+        aws.instance_create(name = name, subnet=subnet, sg=sg,
+                            associate_public_ip = associate_public_ip)
         aws_list.append(aws)
 
         # aws.instance_display_all()

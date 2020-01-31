@@ -117,17 +117,21 @@ class AwsUtils:
             for i in r['Instances']:
                 instance_id = i['InstanceId']
                 print('***** ' + instance_id)
-                print('Name: ' + self.instance_get_name(instance_id))
-                print('State: ' + i['State']['Name'])
+                print('Name\t\t\t' + self.instance_get_name(instance_id))
+                print('State\t\t\t' + i['State']['Name'])
                 if display_type == 'Network':
                     if 'VpcId' in i:
                         vpc_id = i['VpcId']
                         vpc_name = self.vpc_get_name_from_id(vpc_id)
-                        print('VPC: ' + vpc_name)
+                        print('VPC\t\t\t' + vpc_name)
+                    if 'Placement' in i:
+                        print('AZ\t\t\t' + i['Placement']['AvailabilityZone'])
+                    if 'SubnetId' in i:
+                        print('Subnet\t\t\t' + i['SubnetId'])
                     if 'PrivateIpAddress' in i:
-                        print('PrivateIpAddress: ' + i['PrivateIpAddress'])
+                        print('PrivateIpAddress\t' + i['PrivateIpAddress'])
                     if 'PublicIpAddress' in i:
-                        print('PublicIpAddress: ' + i['PublicIpAddress'])
+                        print('PublicIpAddress\t\t' + i['PublicIpAddress'])
                     print()
 
     def instance_list_for_all_profiles(self, display_type='Full'):
@@ -171,7 +175,7 @@ class AwsUtils:
             MinCount=1,
             MaxCount=1,
             InstanceType=instance_type,
-            KeyName=self.profile,  # my key pairs always have the same name as profile
+            KeyName='nicolas',
             NetworkInterfaces=[
                 {
                     'DeviceIndex': 0,
