@@ -4,7 +4,9 @@ import requests, json, urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-CONTROLLER = "my_controller_ip"
+CONTROLLER = 'my_controller_ip'
+USERNAME = 'my_username'
+PASSWORD = 'my_password'
 OLDER_AMIS = {
     'hvm-cloudx-aws-011519',
     'hvm-cloudx-aws-041519',
@@ -19,8 +21,8 @@ def login(controller):
     url = "https://" + controller + "/v1/api"
 
     payload = {'action': 'login',
-               'username': 'admin',
-               'password': 'password'}
+               'username': USERNAME,
+               'password': PASSWORD}
 
     response = requests.request("POST", url, headers={}, data = payload, files = [], verify = False).text.encode('utf8')
 
