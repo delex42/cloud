@@ -1,12 +1,11 @@
 #! /usr/bin/python
 
-import requests, json, urllib3
+import requests, json, urllib3, getpass
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 CONTROLLER = 'my_controller_ip'
 USERNAME = 'my_username'
-PASSWORD = 'my_password'
 OLDER_AMIS = {
     'hvm-cloudx-aws-011519',
     'hvm-cloudx-aws-041519',
@@ -17,12 +16,12 @@ def print_json(json_object):
     print(json.dumps(json_object, indent=4, sort_keys=True, default=str))
 
 # login and store CID
-def login(controller):
+def login(controller, password):
     url = "https://" + controller + "/v1/api"
 
     payload = {'action': 'login',
                'username': USERNAME,
-               'password': PASSWORD}
+               'password': password}
 
     response = requests.request("POST", url, headers={}, data = payload, files = [], verify = False).text.encode('utf8')
 
@@ -56,7 +55,8 @@ def list_gateways_with_older_amis(controller, cid, gateways):
                 print('--> AMI is fine')
 
 def main():
-    cid = login(CONTROLLER)
+    password = getpass.getpass(prompt='Controller password: ')
+    cid = login(CONTROLLER, password)
     gateways = get_all_gateways(CONTROLLER, cid)
     list_gateways_with_older_amis(CONTROLLER, cid, gateways)
 
