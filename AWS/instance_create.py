@@ -11,7 +11,18 @@ def main():
         profile = input("Profile: ")
         aws = AwsUtils(profile)
 
-        name = input("Instance name: ")
+        # Existing instances in that profile
+        print("Existing instances in that profile:")
+        aws.instance_list('Network')
+        
+        # Ask for one instance, or private+public
+        bastion = input("Bastion pair (y/n): ")
+        if bastion == 'y':
+            bastion = True
+            name_bastion = input("Bastion name: ")
+            name_private = input("Private name: ")
+        else:
+            name = input("Instance name: ")
 
         # List VPCs in that account / region and ask user to choose one
         aws.vpc_get_all(True)
@@ -20,21 +31,37 @@ def main():
         
         # List subnets in that VPC, and ask user to choose one
         aws.subnet_get_all(vpc, True)
-        subnet = input("Subnet: ")
+        if bastion is True:
+            subnet_bastion = input("Bastion subnet: ")
+            subnet_private = input("Private subnet: ")
+        else:
+            subnet = input("Subnet: ")
 
         # List security groups in that VPC, and ask user to choose one
         aws.sg_get_all(vpc, True)
         sg = input("Security group: ")
 
-        # Ask for public IP association
-        public_ip = input("Associate public IP (y/n): ")
-        if public_ip == 'y':
-            associate_public_ip = True
-        else:
-            associate_public_ip = False
-
-        aws.instance_create(name = name, subnet=subnet, sg=sg,
-                            associate_public_ip = associate_public_ip)
+        if bastion is True:
+            aws.instance_create(name = name_bastion,
+                                subnet = subnet_bastion,
+                                sg=sg,
+                                associate_public_ip = True)
+            aws.instance_create(name = name_private,
+                                subnet = subnet_private,
+                                sg=sg,
+                                associate_public_ip = False)
+        else:            
+            # Ask for public IP association
+            public_ip = input("Associate public IP (y/n): ")
+            if public_ip == 'y':
+                associate_public_ip = True
+            else:
+                associate_public_ip = False                
+                aws.instance_create(name = name,
+                                    subnet = subnet,
+                                    sg = sg,
+                                    associate_public_ip = associate_public_ip)
+        
         aws_list.append(aws)
 
         # aws.instance_display_all()

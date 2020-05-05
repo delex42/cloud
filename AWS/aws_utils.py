@@ -119,6 +119,7 @@ class AwsUtils:
                 print('***** ' + instance_id)
                 print('Name\t\t\t' + self.instance_get_name(instance_id))
                 print('State\t\t\t' + i['State']['Name'])
+                print('Type\t\t\t' + i['InstanceType'])
                 if display_type == 'Network':
                     if 'VpcId' in i:
                         vpc_id = i['VpcId']

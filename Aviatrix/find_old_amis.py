@@ -4,7 +4,7 @@ import requests, json, urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-CONTROLLER = "13.52.171.86"
+CONTROLLER = "my_controller_ip"
 OLDER_AMIS = {
     'hvm-cloudx-aws-011519',
     'hvm-cloudx-aws-041519',
@@ -23,7 +23,7 @@ def login(controller):
                'password': 'password'}
 
     response = requests.request("POST", url, headers={}, data = payload, files = [], verify = False).text.encode('utf8')
-    
+
     r = json.loads(response)
     # print(r['CID'])
     return r['CID']
@@ -52,7 +52,7 @@ def list_gateways_with_older_amis(controller, cid, gateways):
                 print('--> OLDER AMI')
             else:
                 print('--> AMI is fine')
-                
+
 def main():
     cid = login(CONTROLLER)
     gateways = get_all_gateways(CONTROLLER, cid)
